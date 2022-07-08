@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math show Random;
@@ -11,6 +14,67 @@ const names = [
   'Bar',
   'Baz',
 ];
+
+@immutable
+abstract class LoadAction {
+  const LoadAction();
+}
+
+@immutable
+class LoadPersonAction implements LoadAction {
+  final PersonUrl url;
+  const LoadPersonAction({required this.url}) : super();
+}
+
+enum PersonUrl { person1, person2 }
+
+extension UrlString on PersonUrl {
+  String get urlString {
+    switch (this) {
+      case PersonUrl.person1:
+        return "http://127.0.0.1:5500/api/person1.json";
+      case PersonUrl.person2:
+        return "http://127.0.0.1:5500/api/person1.json";
+    }
+  }
+}
+
+@immutable
+class Person {
+  final String name;
+  final int age;
+  Person.fromJson(Map<String, dynamic> json)
+      : name = json['name'] as String,
+        age = json['age'] as int;
+}
+
+Future<Iterable<Person>> getPersons(String url) => HttpClient()
+    .getUrl(Uri.parse(url))
+    .then((req) => req.close())
+    .then((resp) => resp.transform(utf8.decoder).join())
+    .then((str) => json.decode(str) as List<dynamic>)
+    .then((list) => list.map((e) => Person.fromJson(e)));
+
+@immutable
+class FetchResult {
+  final Iterable<Person> persons;
+  final bool isRetrivedFromCache;
+  const FetchResult(
+    this.persons,
+    this.isRetrivedFromCache,
+  );
+
+  @override
+  String toString() =>
+      'FetchResult (isRetrievedFromCache = $isRetrivedFromCache, persons = $persons)';
+}
+
+// class PersonsBloc extends Bloc<LoadAction, FetchResult?> {
+//   final Map<PersonUrl, Iterable<Person>> _cache = {};
+//   PersonsBloc() : super(null){
+//     on<LoadPersonAction>((event, emit) => null)
+//   }
+// }
 
 extension RandomElement<T> on Iterable<T> {
   T getRandomElement() => elementAt(math.Random().nextInt(length));
